@@ -21,14 +21,7 @@ from database import (
     get_all_premium_users, get_total_users, get_premium_count,
     get_total_sites_count, get_users_with_sites, get_sites_per_user, get_all_sites_detail
 )
-# Import utility functions from bot
-from bot import (
-    check_card_specific_site, check_card_random_site,
-    check_card_with_retry, extract_card, extract_all_cards,
-    get_bin_info, normalize_card, get_status_header,
-    is_site_error, classify_api_response, test_single_site,
-    get_cc_limit, can_use
-)
+
 
 # FastAPI app
 app = FastAPI(
@@ -391,9 +384,6 @@ async def add_proxy(request: ProxyRequest, api_key: str = Depends(verify_api_key
         
         if await is_banned_user(request.user_id):
             raise HTTPException(status_code=403, detail="User is banned")
-        
-        # Import parse_proxy_format and test_proxy from bot
-        from bot import parse_proxy_format, test_proxy
         
         proxy_data = parse_proxy_format(request.proxy)
         if not proxy_data:
