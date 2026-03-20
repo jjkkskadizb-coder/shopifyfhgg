@@ -4,9 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import uvicorn
 import asyncio
-import json
 from datetime import datetime
-import re
 
 # Import database functions
 from database import (
