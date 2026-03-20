@@ -132,3 +132,7 @@ class Database:
 
 # Global database instance
 db = Database()
+
+async def init_db():
+    """Initialize the database connection and create tables"""
+    await db.connect()
