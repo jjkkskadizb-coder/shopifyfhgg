@@ -1,9 +1,8 @@
 # config.py
 import os
 from pathlib import Path
-
-# Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Bot Configuration
