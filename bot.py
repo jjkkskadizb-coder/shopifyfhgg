@@ -10,19 +10,17 @@ import re
 
 # Import database functions
 from database import (
-    init_db, ensure_user, get_user, is_premium_user,
-    add_premium_user, remove_premium, is_banned_user,
+    init_db, db,
+    ensure_user, get_user, is_premium_user, add_premium_user, remove_premium,
+    is_banned_user, ban_user, unban_user,
     create_key, get_key_data, use_key, get_all_keys,
-    add_proxy_db, get_all_user_proxies, get_proxy_count,
-    get_random_proxy, remove_proxy_by_index, remove_proxy_by_url,
-    clear_all_proxies, add_site_db, get_user_sites,
-    remove_site_db, clear_user_sites, set_user_sites,
-    save_card_to_db, get_total_cards_count, get_charged_count,
-    get_approved_count, get_all_premium_users, get_total_users,
-    get_premium_count, get_total_sites_count, get_users_with_sites,
-    get_sites_per_user, get_all_sites_detail
+    add_proxy_db, get_all_user_proxies, get_proxy_count, get_random_proxy,
+    remove_proxy_by_index, remove_proxy_by_url, clear_all_proxies,
+    add_site_db, get_user_sites, remove_site_db, clear_user_sites, set_user_sites,
+    save_card_to_db, get_total_cards_count, get_charged_count, get_approved_count,
+    get_all_premium_users, get_total_users, get_premium_count,
+    get_total_sites_count, get_users_with_sites, get_sites_per_user, get_all_sites_detail
 )
-
 # Import utility functions from bot
 from bot import (
     check_card_specific_site, check_card_random_site,
