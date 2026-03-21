@@ -360,3 +360,163 @@ def get_cc_limit(access_type: str, user_id: int = None) -> int:
     elif access_type == "group_free":
         return 50
     return 0
+
+# ==================== Proxy Utility Functions ====================
+
+def parse_proxy_format(proxy_str: str) -> Optional[Dict[str, Any]]:
+    """Parse proxy string into structured dict.
+
+    Accepted formats:
+      - ip:port
+      - ip:port:username:password
+      - http://ip:port
+      - http://username:password@ip:port
+      - socks5://username:password@ip:port
+    """
+    if not proxy_str:
+        return None
+
+    proxy_str = proxy_str.strip()
+
+    # Handle URL-style proxies (scheme://[user:pass@]host:port)
+    url_match = re.match(
+        r'^(https?|socks[45])://(?:([^:@]+):([^@]+)@)?([^:]+):(\d+)$',
+        proxy_str,
+        re.IGNORECASE,
+    )
+    if url_match:
+        scheme, username, password, ip, port = url_match.groups()
+        proxy_type = 'socks5' if 'socks' in scheme.lower() else 'http'
+        proxy_url = (
+            f"{proxy_type}://{username}:{password}@{ip}:{port}"
+            if username and password
+            else f"{proxy_type}://{ip}:{port}"
+        )
+        return {
+            'ip': ip,
+            'port': int(port),
+            'username': username,
+            'password': password,
+            'type': proxy_type,
+            'proxy_url': proxy_url,
+        }
+
+    # Handle plain ip:port[:user:pass] format
+    parts = proxy_str.split(':')
+    if len(parts) == 2:
+        ip, port = parts
+        if not port.isdigit():
+            return None
+        proxy_url = f"http://{ip}:{port}"
+        return {
+            'ip': ip,
+            'port': int(port),
+            'username': None,
+            'password': None,
+            'type': 'http',
+            'proxy_url': proxy_url,
+        }
+    elif len(parts) == 4:
+        ip, port, username, password = parts
+        if not port.isdigit():
+            return None
+        proxy_url = f"http://{username}:{password}@{ip}:{port}"
+        return {
+            'ip': ip,
+            'port': int(port),
+            'username': username,
+            'password': password,
+            'type': 'http',
+            'proxy_url': proxy_url,
+        }
+
+    return None
+
+
+async def test_proxy(proxy_url: str, timeout: int = 15) -> Tuple[bool, str]:
+    """Test whether a proxy is working.
+
+    Returns (is_working, external_ip_or_error_message).
+    """
+    try:
+        client_timeout = aiohttp.ClientTimeout(total=timeout)
+        async with aiohttp.ClientSession(timeout=client_timeout) as session:
+            async with session.get(
+                'https://api.ipify.org?format=json',
+                proxy=proxy_url,
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return True, data.get('ip', 'unknown')
+                return False, f"HTTP {resp.status}"
+    except asyncio.TimeoutError:
+        return False, "Proxy timed out"
+    except Exception as e:
+        return False, str(e)
+
+
+# ==================== Access Control ====================
+
+async def can_use(user_id: int, chat) -> Tuple[bool, str]:
+    """Determine whether a user can use the bot and return their access type.
+
+    Returns (allowed, access_type) where access_type is one of:
+      'banned', 'no_access', 'premium_private', 'premium_group', 'group_free'
+    """
+    if await is_banned_user(user_id):
+        return False, "banned"
+
+    is_prem = await is_premium_user(user_id)
+    is_private = getattr(chat, 'id', None) == user_id
+
+    if is_private:
+        if is_prem:
+            return True, "premium_private"
+        else:
+            return False, "no_access"
+    else:
+        if is_prem:
+            return True, "premium_group"
+        else:
+            return True, "group_free"
+
+
+# ==================== URL / Domain Helpers ====================
+
+def is_valid_url_or_domain(text: str) -> bool:
+    """Return True if *text* looks like a valid URL or bare domain."""
+    if not text:
+        return False
+    text = text.strip()
+    # Accept full URLs
+    if re.match(r'^https?://', text, re.IGNORECASE):
+        return bool(re.match(
+            r'^https?://[^\s/$.?#].[^\s]*$', text, re.IGNORECASE
+        ))
+    # Accept bare domains / subdomains (e.g. shop.example.com)
+    return bool(re.match(
+        r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$',
+        text,
+    ))
+
+
+def extract_urls_from_text(text: str) -> List[str]:
+    """Extract all URLs and bare domains from *text*."""
+    if not text:
+        return []
+    # Match http(s) URLs
+    url_pattern = re.compile(
+        r'https?://[^\s/$.?#].[^\s]*',
+        re.IGNORECASE,
+    )
+    urls = url_pattern.findall(text)
+    # Match bare domains (word.tld or sub.word.tld)
+    domain_pattern = re.compile(
+        r'\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}\b'
+    )
+    for match in domain_pattern.finditer(text):
+        candidate = match.group(0)
+        # Skip if already captured as part of a URL
+        if not any(candidate in u for u in urls):
+            urls.append(candidate)
+    return urls
