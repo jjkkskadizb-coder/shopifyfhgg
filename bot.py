@@ -19,15 +19,6 @@ from database import (
     get_all_premium_users, get_total_users, get_premium_count,
     get_total_sites_count, get_users_with_sites, get_sites_per_user, get_all_sites_detail
 )
-# Import utility functions from bot
-from bot import (
-    check_card_specific_site, check_card_random_site,
-    check_card_with_retry, extract_card, extract_all_cards,
-    get_bin_info, normalize_card, get_status_header,
-    is_site_error, classify_api_response, test_single_site,
-    get_cc_limit, can_use
-)
-
 # FastAPI app
 app = FastAPI(
     title="CC Checker Bot API",
